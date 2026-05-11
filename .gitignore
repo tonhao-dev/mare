@@ -38,3 +38,6 @@ pnpm-debug.log*
 
 # TypeScript
 *.tsbuildinfo
+
+# Docker
+.dockerignore

@@ -3,7 +3,7 @@ import {
   calculateControlBalance,
   fetchBrazilianHolidays,
   formatCentsToBRL,
-  computeCycleStartDay,
+  resolveCycleStartDate,
   type ControlType,
   type CycleAnchor,
 } from "@sistema-mare/core";
@@ -65,13 +65,13 @@ export default async function ControlsPage() {
             </TableHead>
             <TableBody>
               {controls.map((control) => {
-                const cycleStartDay = computeCycleStartDay(
-                  control.cycleAnchor as CycleAnchor,
-                  control.cycleOffsetDays,
-                  today,
-                  control.countWorkingDaysOnly,
+                const cycleStartDate = resolveCycleStartDate({
+                  cycleAnchor: control.cycleAnchor as CycleAnchor,
+                  cycleOffsetDays: control.cycleOffsetDays,
+                  countWorkingDaysOnly: control.countWorkingDaysOnly,
                   holidays,
-                );
+                  referenceDate: today,
+                });
                 const balance = calculateControlBalance({
                   baseValueCents: control.baseValueCents,
                   dailyStepCents: control.dailyStepCents,
@@ -93,7 +93,10 @@ export default async function ControlsPage() {
                       {formatCentsToBRL(control.dailyStepCents)}
                     </TableCell>
                     <TableCell>
-                      dia {cycleStartDay}
+                      {cycleStartDate.toLocaleDateString("pt-BR", {
+                        day: "2-digit",
+                        month: "short",
+                      })}
                       {control.countWorkingDaysOnly && (
                         <Chip label="úteis" size="small" sx={{ ml: 1 }} />
                       )}

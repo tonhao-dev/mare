@@ -5,6 +5,7 @@ import {
   calculateControlBalance,
   fetchBrazilianHolidays,
   computeCycleStartDay,
+  resolveCycleStartDate,
   formatCentsToBRL,
   type ControlType,
   type CycleAnchor,
@@ -33,8 +34,21 @@ export default async function ControlDetailPage({
 
   if (!control) notFound();
 
-  const cycleStartDay = computeCycleStartDay(
-    control.cycleAnchor as CycleAnchor,
+  const anchor = control.cycleAnchor as CycleAnchor;
+  const type = control.type as ControlType;
+
+  // The actual cycle start date (may be in the previous month)
+  const cycleStartDate = resolveCycleStartDate({
+    cycleAnchor: anchor,
+    cycleOffsetDays: control.cycleOffsetDays,
+    countWorkingDaysOnly: control.countWorkingDaysOnly,
+    holidays,
+    referenceDate: today,
+  });
+
+  // This month's cycle start day (for "next cycle" info)
+  const thisMonthCycleStartDay = computeCycleStartDay(
+    anchor,
     control.cycleOffsetDays,
     today,
     control.countWorkingDaysOnly,
@@ -44,23 +58,30 @@ export default async function ControlDetailPage({
   const balance = calculateControlBalance({
     baseValueCents: control.baseValueCents,
     dailyStepCents: control.dailyStepCents,
-    type: control.type as ControlType,
-    cycleAnchor: control.cycleAnchor as CycleAnchor,
+    type,
+    cycleAnchor: anchor,
     cycleOffsetDays: control.cycleOffsetDays,
     countWorkingDaysOnly: control.countWorkingDaysOnly,
     holidays,
     referenceDate: today,
   });
 
-  const todayDay = today.getDate();
-  const cycleStarted = todayDay >= cycleStartDay;
+  const isInCurrentMonthCycle =
+    cycleStartDate.getMonth() === today.getMonth() &&
+    cycleStartDate.getFullYear() === today.getFullYear();
 
   const baseFormatted = formatCentsToBRL(control.baseValueCents);
   const stepFormatted = formatCentsToBRL(control.dailyStepCents);
   const balanceFormatted = formatCentsToBRL(balance);
 
+  const cycleStartLabel = cycleStartDate.toLocaleDateString("pt-BR", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  });
+
   const anchorLabel =
-    control.cycleAnchor === "START"
+    anchor === "START"
       ? `${control.cycleOffsetDays} dias após o início do mês`
       : `${control.cycleOffsetDays} dias antes do fim do mês`;
 
@@ -104,10 +125,10 @@ export default async function ControlDetailPage({
           </Box>
           <Box>
             <Typography variant="caption" color="text.secondary">
-              Início do Ciclo
+              Configuração do Ciclo
             </Typography>
             <Typography>
-              Dia {cycleStartDay} ({anchorLabel})
+              {anchorLabel}
               {control.countWorkingDaysOnly && (
                 <Chip label="apenas dias úteis" size="small" sx={{ ml: 1 }} />
               )}
@@ -115,20 +136,24 @@ export default async function ControlDetailPage({
           </Box>
           <Box>
             <Typography variant="caption" color="text.secondary">
-              Dia Atual
+              Ciclo Atual Iniciou em
             </Typography>
-            <Typography>
-              {todayDay}
-              {!cycleStarted && (
-                <Typography
-                  component="span"
-                  color="text.secondary"
-                  sx={{ ml: 1 }}
-                >
-                  (ciclo começa no dia {cycleStartDay})
-                </Typography>
-              )}
+            <Typography>{cycleStartLabel}</Typography>
+            {!isInCurrentMonthCycle && (
+              <Typography
+                variant="body2"
+                color="text.secondary"
+                sx={{ mt: 0.5 }}
+              >
+                Próximo ciclo começa no dia {thisMonthCycleStartDay} deste mês
+              </Typography>
+            )}
+          </Box>
+          <Box>
+            <Typography variant="caption" color="text.secondary">
+              Data Atual
             </Typography>
+            <Typography>{today.toLocaleDateString("pt-BR")}</Typography>
           </Box>
           <Box>
             <Typography variant="caption" color="text.secondary">
@@ -136,18 +161,16 @@ export default async function ControlDetailPage({
             </Typography>
             <Typography variant="h6">{balanceFormatted}</Typography>
           </Box>
-          {cycleStarted && (
-            <Box>
-              <Typography variant="caption" color="text.secondary">
-                Cálculo
-              </Typography>
-              <Typography fontFamily="monospace">
-                {control.type === "DECREASE"
-                  ? `${baseFormatted} - ${stepFormatted} × dias decorridos = ${balanceFormatted}`
-                  : `${baseFormatted} + ${stepFormatted} × dias decorridos = ${balanceFormatted}`}
-              </Typography>
-            </Box>
-          )}
+          <Box>
+            <Typography variant="caption" color="text.secondary">
+              Cálculo
+            </Typography>
+            <Typography fontFamily="monospace">
+              {type === "DECREASE"
+                ? `${baseFormatted} - ${stepFormatted} × dias decorridos = ${balanceFormatted}`
+                : `${baseFormatted} + ${stepFormatted} × dias decorridos = ${balanceFormatted}`}
+            </Typography>
+          </Box>
           <Divider />
           <Box>
             <Typography variant="caption" color="text.secondary">

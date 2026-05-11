@@ -16,10 +16,14 @@ export async function createControl(
         baseValueCents: parseBRLToCents(data.baseValue),
         type: data.type,
         dailyStepCents: parseBRLToCents(data.dailyStep),
+        cycleAnchor: data.cycleAnchor,
+        cycleOffsetDays: data.cycleOffsetDays,
+        countWorkingDaysOnly: data.countWorkingDaysOnly,
       },
     });
     revalidatePath("/controls");
   } catch (error) {
+    console.error(error);
     return { error: "Erro ao criar controle. Tente novamente." };
   }
   redirect("/controls");
@@ -37,6 +41,9 @@ export async function updateControl(
         baseValueCents: parseBRLToCents(data.baseValue),
         type: data.type,
         dailyStepCents: parseBRLToCents(data.dailyStep),
+        cycleAnchor: data.cycleAnchor,
+        cycleOffsetDays: data.cycleOffsetDays,
+        countWorkingDaysOnly: data.countWorkingDaysOnly,
       },
     });
     revalidatePath("/controls");

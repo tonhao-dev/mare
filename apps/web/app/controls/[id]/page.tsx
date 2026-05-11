@@ -3,14 +3,18 @@ import Link from "next/link";
 import { prisma } from "@sistema-mare/database";
 import {
   calculateControlBalance,
+  fetchBrazilianHolidays,
+  computeCycleStartDay,
   formatCentsToBRL,
   type ControlType,
+  type CycleAnchor,
 } from "@sistema-mare/core";
 import Typography from "@mui/material/Typography";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Paper from "@mui/material/Paper";
 import Divider from "@mui/material/Divider";
+import Chip from "@mui/material/Chip";
 import { DeleteButton } from "@/components/DeleteButton";
 import { deleteControl } from "../actions";
 
@@ -21,29 +25,44 @@ interface ControlDetailPageProps {
 export default async function ControlDetailPage({
   params,
 }: ControlDetailPageProps) {
-  const control = await prisma.control.findUnique({
-    where: { id: params.id },
-  });
+  const today = new Date();
+  const [control, holidays] = await Promise.all([
+    prisma.control.findUnique({ where: { id: params.id } }),
+    fetchBrazilianHolidays(today.getFullYear()),
+  ]);
 
-  if (!control) {
-    notFound();
-  }
+  if (!control) notFound();
 
-  const today = new Date().getDate();
+  const cycleStartDay = computeCycleStartDay(
+    control.cycleAnchor as CycleAnchor,
+    control.cycleOffsetDays,
+    today,
+    control.countWorkingDaysOnly,
+    holidays,
+  );
+
   const balance = calculateControlBalance({
     baseValueCents: control.baseValueCents,
     dailyStepCents: control.dailyStepCents,
     type: control.type as ControlType,
+    cycleAnchor: control.cycleAnchor as CycleAnchor,
+    cycleOffsetDays: control.cycleOffsetDays,
+    countWorkingDaysOnly: control.countWorkingDaysOnly,
+    holidays,
+    referenceDate: today,
   });
+
+  const todayDay = today.getDate();
+  const cycleStarted = todayDay >= cycleStartDay;
 
   const baseFormatted = formatCentsToBRL(control.baseValueCents);
   const stepFormatted = formatCentsToBRL(control.dailyStepCents);
   const balanceFormatted = formatCentsToBRL(balance);
 
-  const calculationExplanation =
-    control.type === "DECREASE"
-      ? `${baseFormatted} - ${stepFormatted} × ${today} = ${balanceFormatted}`
-      : `${baseFormatted} + ${stepFormatted} × ${today} = ${balanceFormatted}`;
+  const anchorLabel =
+    control.cycleAnchor === "START"
+      ? `${control.cycleOffsetDays} dias após o início do mês`
+      : `${control.cycleOffsetDays} dias antes do fim do mês`;
 
   return (
     <Box>
@@ -85,9 +104,31 @@ export default async function ControlDetailPage({
           </Box>
           <Box>
             <Typography variant="caption" color="text.secondary">
-              Dia do Mês Atual
+              Início do Ciclo
             </Typography>
-            <Typography>{today}</Typography>
+            <Typography>
+              Dia {cycleStartDay} ({anchorLabel})
+              {control.countWorkingDaysOnly && (
+                <Chip label="apenas dias úteis" size="small" sx={{ ml: 1 }} />
+              )}
+            </Typography>
+          </Box>
+          <Box>
+            <Typography variant="caption" color="text.secondary">
+              Dia Atual
+            </Typography>
+            <Typography>
+              {todayDay}
+              {!cycleStarted && (
+                <Typography
+                  component="span"
+                  color="text.secondary"
+                  sx={{ ml: 1 }}
+                >
+                  (ciclo começa no dia {cycleStartDay})
+                </Typography>
+              )}
+            </Typography>
           </Box>
           <Box>
             <Typography variant="caption" color="text.secondary">
@@ -95,14 +136,18 @@ export default async function ControlDetailPage({
             </Typography>
             <Typography variant="h6">{balanceFormatted}</Typography>
           </Box>
-          <Box>
-            <Typography variant="caption" color="text.secondary">
-              Cálculo
-            </Typography>
-            <Typography fontFamily="monospace">
-              {calculationExplanation}
-            </Typography>
-          </Box>
+          {cycleStarted && (
+            <Box>
+              <Typography variant="caption" color="text.secondary">
+                Cálculo
+              </Typography>
+              <Typography fontFamily="monospace">
+                {control.type === "DECREASE"
+                  ? `${baseFormatted} - ${stepFormatted} × dias decorridos = ${balanceFormatted}`
+                  : `${baseFormatted} + ${stepFormatted} × dias decorridos = ${balanceFormatted}`}
+              </Typography>
+            </Box>
+          )}
           <Divider />
           <Box>
             <Typography variant="caption" color="text.secondary">

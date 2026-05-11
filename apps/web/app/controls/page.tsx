@@ -1,8 +1,11 @@
 import { prisma } from "@sistema-mare/database";
 import {
   calculateControlBalance,
+  fetchBrazilianHolidays,
   formatCentsToBRL,
+  computeCycleStartDay,
   type ControlType,
+  type CycleAnchor,
 } from "@sistema-mare/core";
 import Link from "next/link";
 import Button from "@mui/material/Button";
@@ -15,13 +18,16 @@ import TableRow from "@mui/material/TableRow";
 import Paper from "@mui/material/Paper";
 import Typography from "@mui/material/Typography";
 import Box from "@mui/material/Box";
+import Chip from "@mui/material/Chip";
 import { DeleteButton } from "@/components/DeleteButton";
 import { deleteControl } from "./actions";
 
 export default async function ControlsPage() {
-  const controls = await prisma.control.findMany({
-    orderBy: { createdAt: "desc" },
-  });
+  const today = new Date();
+  const [controls, holidays] = await Promise.all([
+    prisma.control.findMany({ orderBy: { createdAt: "desc" } }),
+    fetchBrazilianHolidays(today.getFullYear()),
+  ]);
 
   return (
     <Box>
@@ -52,16 +58,29 @@ export default async function ControlsPage() {
                 <TableCell>Tipo</TableCell>
                 <TableCell>Valor Base</TableCell>
                 <TableCell>Passo Diário</TableCell>
+                <TableCell>Início do Ciclo</TableCell>
                 <TableCell>Saldo Calculado</TableCell>
                 <TableCell>Ações</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {controls.map((control) => {
+                const cycleStartDay = computeCycleStartDay(
+                  control.cycleAnchor as CycleAnchor,
+                  control.cycleOffsetDays,
+                  today,
+                  control.countWorkingDaysOnly,
+                  holidays,
+                );
                 const balance = calculateControlBalance({
                   baseValueCents: control.baseValueCents,
                   dailyStepCents: control.dailyStepCents,
                   type: control.type as ControlType,
+                  cycleAnchor: control.cycleAnchor as CycleAnchor,
+                  cycleOffsetDays: control.cycleOffsetDays,
+                  countWorkingDaysOnly: control.countWorkingDaysOnly,
+                  holidays,
+                  referenceDate: today,
                 });
                 return (
                   <TableRow key={control.id}>
@@ -72,6 +91,12 @@ export default async function ControlsPage() {
                     </TableCell>
                     <TableCell>
                       {formatCentsToBRL(control.dailyStepCents)}
+                    </TableCell>
+                    <TableCell>
+                      dia {cycleStartDay}
+                      {control.countWorkingDaysOnly && (
+                        <Chip label="úteis" size="small" sx={{ ml: 1 }} />
+                      )}
                     </TableCell>
                     <TableCell>{formatCentsToBRL(balance)}</TableCell>
                     <TableCell>

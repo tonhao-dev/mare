@@ -1,6 +1,6 @@
 "use client";
 
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import TextField from "@mui/material/TextField";
 import Select from "@mui/material/Select";
@@ -21,6 +21,7 @@ export function ControlForm({ defaultValues, onSubmit }: ControlFormProps) {
   const {
     register,
     handleSubmit,
+    control,
     formState: { errors, isSubmitting },
   } = useForm<ControlFormValues>({
     resolver: zodResolver(controlSchema),
@@ -50,19 +51,27 @@ export function ControlForm({ defaultValues, onSubmit }: ControlFormProps) {
         placeholder="1.000,00"
       />
 
-      <FormControl fullWidth error={!!errors.type}>
-        <InputLabel id="type-label">Tipo</InputLabel>
-        <Select
-          labelId="type-label"
-          label="Tipo"
-          defaultValue={defaultValues?.type ?? ""}
-          inputProps={register("type")}
-        >
-          <MenuItem value="INCREASE">INCREASE (Aumenta)</MenuItem>
-          <MenuItem value="DECREASE">DECREASE (Diminui)</MenuItem>
-        </Select>
-        {errors.type && <FormHelperText>{errors.type.message}</FormHelperText>}
-      </FormControl>
+      <Controller
+        name="type"
+        control={control}
+        render={({ field }) => (
+          <FormControl fullWidth error={!!errors.type}>
+            <InputLabel id="type-label">Tipo</InputLabel>
+            <Select
+              {...field}
+              labelId="type-label"
+              label="Tipo"
+              value={field.value ?? ""}
+            >
+              <MenuItem value="INCREASE">INCREASE (Aumenta)</MenuItem>
+              <MenuItem value="DECREASE">DECREASE (Diminui)</MenuItem>
+            </Select>
+            {errors.type && (
+              <FormHelperText>{errors.type.message}</FormHelperText>
+            )}
+          </FormControl>
+        )}
+      />
 
       <TextField
         label="Passo Diário (R$)"

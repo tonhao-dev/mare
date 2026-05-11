@@ -1,0 +1,23 @@
+{
+  "name": "@sistema-mare/database",
+  "version": "0.0.1",
+  "private": true,
+  "main": "./src/client.ts",
+  "exports": {
+    ".": "./src/client.ts"
+  },
+  "scripts": {
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate dev",
+    "db:studio": "prisma studio",
+    "build": "echo 'No build step for database package'",
+    "lint": "echo 'No lint step for database package'"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.14.0"
+  },
+  "devDependencies": {
+    "prisma": "^5.14.0",
+    "typescript": "^5.4.5"
+  }
+}

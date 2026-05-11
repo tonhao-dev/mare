@@ -1,0 +1,18 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Control {
+  id             String   @id @default(cuid())
+  name           String
+  baseValueCents Int
+  type           String
+  dailyStepCents Int
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}

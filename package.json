@@ -1,0 +1,13 @@
+{
+  "name": "sistema-mare",
+  "private": true,
+  "scripts": {
+    "dev": "pnpm --recursive run dev",
+    "build": "pnpm --recursive run build",
+    "lint": "pnpm --recursive run lint",
+    "test": "pnpm --recursive run test",
+    "db:generate": "pnpm --filter @sistema-mare/database run db:generate",
+    "db:migrate": "pnpm --filter @sistema-mare/database run db:migrate",
+    "db:studio": "pnpm --filter @sistema-mare/database run db:studio"
+  }
+}
